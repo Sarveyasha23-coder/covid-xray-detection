@@ -34,12 +34,20 @@ if not os.path.exists(model_path):
 model = load_model(model_path)
 
 # -----------------------------------
-# Get Model Input Shape
+# Show Model Input Shape
+# -----------------------------------
+
+st.write("Model Expected Input Shape:", model.input_shape)
+
+# -----------------------------------
+# Extract Model Dimensions
 # -----------------------------------
 
 input_shape = model.input_shape
 
-st.write("Model Input Shape:", input_shape)
+height = input_shape[1]
+width = input_shape[2]
+channels = input_shape[3]
 
 # -----------------------------------
 # App Title
@@ -52,7 +60,7 @@ st.write(
 )
 
 # -----------------------------------
-# Upload File
+# Upload Image
 # -----------------------------------
 
 uploaded_file = st.file_uploader(
@@ -61,13 +69,15 @@ uploaded_file = st.file_uploader(
 )
 
 # -----------------------------------
-# Prediction
+# Prediction Section
 # -----------------------------------
 
 if uploaded_file is not None:
 
+    # Open image
     image = Image.open(uploaded_file)
 
+    # Display image
     st.image(
         image,
         caption="Uploaded Chest X-ray",
@@ -75,44 +85,57 @@ if uploaded_file is not None:
     )
 
     # -----------------------------------
-    # Check Model Expected Channels
+    # Preprocessing
     # -----------------------------------
-
-    channels = input_shape[-1]
 
     if channels == 1:
 
-        # Grayscale Model
-
+        # Convert to grayscale
         image = image.convert("L")
 
         img = np.array(image)
 
-        img = cv2.resize(img, (224, 224))
+        # Resize
+        img = cv2.resize(img, (width, height))
 
+        # Normalize
         img = img / 255.0
 
-        img = np.reshape(img, (1, 224, 224, 1))
+        # Reshape
+        img = np.reshape(img, (1, height, width, 1))
 
     else:
 
-        # RGB Model
-
+        # Convert to RGB
         image = image.convert("RGB")
 
         img = np.array(image)
 
-        img = cv2.resize(img, (224, 224))
+        # Resize
+        img = cv2.resize(img, (width, height))
 
+        # Normalize
         img = img / 255.0
 
-        img = np.reshape(img, (1, 224, 224, channels))
+        # Reshape
+        img = np.reshape(img, (1, height, width, channels))
+
+    # -----------------------------------
+    # Debugging Shapes
+    # -----------------------------------
+
+    st.write("Image Shape Sent To Model:", img.shape)
+    st.write("Model Expected Shape:", model.input_shape)
 
     # -----------------------------------
     # Predict
     # -----------------------------------
 
     prediction = model.predict(img)
+
+    # -----------------------------------
+    # Results
+    # -----------------------------------
 
     st.subheader("Prediction Result")
 
