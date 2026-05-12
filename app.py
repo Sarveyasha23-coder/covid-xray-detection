@@ -7,9 +7,19 @@ from tensorflow.keras.models import load_model
 import gdown
 import os
 
-# -----------------------------
+# -----------------------------------
+# Streamlit Page Configuration
+# -----------------------------------
+
+st.set_page_config(
+    page_title="COVID-19 X-ray Detection",
+    page_icon="🩺",
+    layout="centered"
+)
+
+# -----------------------------------
 # Download Model from Google Drive
-# -----------------------------
+# -----------------------------------
 
 file_id = "1WOcCDbuGZsGOxKI-ViO9L0JQcjN4myTi"
 model_path = "covid_model.h5"
@@ -18,71 +28,65 @@ if not os.path.exists(model_path):
     url = f"https://drive.google.com/uc?id={file_id}"
     gdown.download(url, model_path, quiet=False)
 
-# -----------------------------
+# -----------------------------------
 # Load Trained Model
-# -----------------------------
+# -----------------------------------
 
 model = load_model(model_path)
 
-# -----------------------------
-# Streamlit Page Config
-# -----------------------------
-
-st.set_page_config(
-    page_title="COVID-19 X-ray Detection",
-    page_icon="🩺",
-    layout="centered"
-)
-
-# -----------------------------
-# Title and Description
-# -----------------------------
+# -----------------------------------
+# App Title
+# -----------------------------------
 
 st.title("🩺 COVID-19 Detection from Chest X-rays")
+
 st.write(
-    "Upload a chest X-ray image to predict whether the patient is COVID Positive or Normal."
+    "Upload a chest X-ray image and the CNN model will predict whether the patient is COVID Positive or Normal."
 )
 
-# -----------------------------
+# -----------------------------------
 # File Upload
-# -----------------------------
+# -----------------------------------
 
 uploaded_file = st.file_uploader(
     "Upload Chest X-ray Image",
     type=["jpg", "jpeg", "png"]
 )
 
-# -----------------------------
-# Prediction Logic
-# -----------------------------
+# -----------------------------------
+# Prediction Section
+# -----------------------------------
 
 if uploaded_file is not None:
 
-    # Open Image
+    # Open image
     image = Image.open(uploaded_file)
 
-    # Display Uploaded Image
-    st.image(image, caption="Uploaded X-ray Image", use_container_width=True)
+    # Display uploaded image
+    st.image(
+        image,
+        caption="Uploaded Chest X-ray",
+        use_container_width=True
+    )
 
-    # Convert image to array
+    # Convert image to RGB
+    image = image.convert("RGB")
+
+    # Convert to numpy array
     img = np.array(image)
-
-    # Convert to grayscale if needed
-    if len(img.shape) == 3:
-        img = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
 
     # Resize image
     img = cv2.resize(img, (224, 224))
 
-    # Normalize
+    # Normalize image
     img = img / 255.0
 
-    # Reshape for model
-    img = img.reshape(1, 224, 224, 1)
+    # Reshape image for model
+    img = np.reshape(img, (1, 224, 224, 3))
 
-    # -----------------------------
+    # -----------------------------------
     # Predict
-    # -----------------------------
+    # -----------------------------------
 
     prediction = model.predict(img)
 
@@ -98,11 +102,12 @@ if uploaded_file is not None:
 
     st.write(f"Confidence Score: {confidence:.2f}%")
 
-# -----------------------------
+# -----------------------------------
 # Footer
-# -----------------------------
+# -----------------------------------
 
 st.markdown("---")
+
 st.markdown(
-    "Developed using CNN, TensorFlow, Streamlit, and Chest X-ray Images"
+    "Developed using CNN, TensorFlow, Streamlit, and Chest X-ray Imaging"
 )
