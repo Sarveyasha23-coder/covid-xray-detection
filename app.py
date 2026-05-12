@@ -2,7 +2,6 @@ import streamlit as st
 import numpy as np
 import cv2
 from PIL import Image
-import tensorflow as tf
 from tensorflow.keras.models import load_model
 import gdown
 import os
@@ -29,10 +28,18 @@ if not os.path.exists(model_path):
     gdown.download(url, model_path, quiet=False)
 
 # -----------------------------------
-# Load Trained Model
+# Load Model
 # -----------------------------------
 
 model = load_model(model_path)
+
+# -----------------------------------
+# Get Model Input Shape
+# -----------------------------------
+
+input_shape = model.input_shape
+
+st.write("Model Input Shape:", input_shape)
 
 # -----------------------------------
 # App Title
@@ -41,11 +48,11 @@ model = load_model(model_path)
 st.title("🩺 COVID-19 Detection from Chest X-rays")
 
 st.write(
-    "Upload a chest X-ray image and the CNN model will predict whether the patient is COVID Positive or Normal."
+    "Upload a chest X-ray image to predict whether the patient is COVID Positive or Normal."
 )
 
 # -----------------------------------
-# File Upload
+# Upload File
 # -----------------------------------
 
 uploaded_file = st.file_uploader(
@@ -54,35 +61,52 @@ uploaded_file = st.file_uploader(
 )
 
 # -----------------------------------
-# Prediction Section
+# Prediction
 # -----------------------------------
 
 if uploaded_file is not None:
 
-    # Open image
     image = Image.open(uploaded_file)
 
-    # Display uploaded image
     st.image(
         image,
         caption="Uploaded Chest X-ray",
         use_container_width=True
     )
 
-    # Convert image to RGB
-    image = image.convert("RGB")
+    # -----------------------------------
+    # Check Model Expected Channels
+    # -----------------------------------
 
-    # Convert to numpy array
-    img = np.array(image)
+    channels = input_shape[-1]
 
-    # Resize image
-    img = cv2.resize(img, (224, 224))
+    if channels == 1:
 
-    # Normalize image
-    img = img / 255.0
+        # Grayscale Model
 
-    # Reshape image for model
-    img = np.reshape(img, (1, 224, 224, 3))
+        image = image.convert("L")
+
+        img = np.array(image)
+
+        img = cv2.resize(img, (224, 224))
+
+        img = img / 255.0
+
+        img = np.reshape(img, (1, 224, 224, 1))
+
+    else:
+
+        # RGB Model
+
+        image = image.convert("RGB")
+
+        img = np.array(image)
+
+        img = cv2.resize(img, (224, 224))
+
+        img = img / 255.0
+
+        img = np.reshape(img, (1, 224, 224, channels))
 
     # -----------------------------------
     # Predict
@@ -92,7 +116,6 @@ if uploaded_file is not None:
 
     st.subheader("Prediction Result")
 
-    # Binary Classification
     if prediction[0][0] > 0.5:
         st.error("⚠️ COVID Positive")
         confidence = prediction[0][0] * 100
