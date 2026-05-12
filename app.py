@@ -1,40 +1,108 @@
-
 import streamlit as st
 import numpy as np
 import cv2
-
+from PIL import Image
+import tensorflow as tf
 from tensorflow.keras.models import load_model
+import gdown
+import os
 
-model = load_model('covid_model.h5')
+# -----------------------------
+# Download Model from Google Drive
+# -----------------------------
 
-classes = ['Covid', 'Normal', 'Viral Pneumonia']
+file_id = "1WOcCDbuGZsGOxKI-ViO9L0JQcjN4myTi"
+model_path = "covid_model.h5"
 
-st.title("COVID Detection from Chest X-Ray")
+if not os.path.exists(model_path):
+    url = f"https://drive.google.com/uc?id={file_id}"
+    gdown.download(url, model_path, quiet=False)
+
+# -----------------------------
+# Load Trained Model
+# -----------------------------
+
+model = load_model(model_path)
+
+# -----------------------------
+# Streamlit Page Config
+# -----------------------------
+
+st.set_page_config(
+    page_title="COVID-19 X-ray Detection",
+    page_icon="🩺",
+    layout="centered"
+)
+
+# -----------------------------
+# Title and Description
+# -----------------------------
+
+st.title("🩺 COVID-19 Detection from Chest X-rays")
+st.write(
+    "Upload a chest X-ray image to predict whether the patient is COVID Positive or Normal."
+)
+
+# -----------------------------
+# File Upload
+# -----------------------------
 
 uploaded_file = st.file_uploader(
-    "Upload X-Ray Image",
-    type=['jpg','png','jpeg']
+    "Upload Chest X-ray Image",
+    type=["jpg", "jpeg", "png"]
 )
+
+# -----------------------------
+# Prediction Logic
+# -----------------------------
 
 if uploaded_file is not None:
 
-    file_bytes = np.asarray(
-        bytearray(uploaded_file.read()),
-        dtype=np.uint8
-    )
+    # Open Image
+    image = Image.open(uploaded_file)
 
-    image = cv2.imdecode(file_bytes, 1)
+    # Display Uploaded Image
+    st.image(image, caption="Uploaded X-ray Image", use_container_width=True)
 
-    image = cv2.resize(image, (128,128))
+    # Convert image to array
+    img = np.array(image)
 
-    image = image / 255.0
+    # Convert to grayscale if needed
+    if len(img.shape) == 3:
+        img = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
 
-    image = np.expand_dims(image, axis=0)
+    # Resize image
+    img = cv2.resize(img, (224, 224))
 
-    prediction = model.predict(image)
+    # Normalize
+    img = img / 255.0
 
-    predicted_class = classes[np.argmax(prediction)]
+    # Reshape for model
+    img = img.reshape(1, 224, 224, 1)
 
-    st.image(uploaded_file)
+    # -----------------------------
+    # Predict
+    # -----------------------------
 
-    st.success(f"Prediction: {predicted_class}")
+    prediction = model.predict(img)
+
+    st.subheader("Prediction Result")
+
+    # Binary Classification
+    if prediction[0][0] > 0.5:
+        st.error("⚠️ COVID Positive")
+        confidence = prediction[0][0] * 100
+    else:
+        st.success("✅ Normal")
+        confidence = (1 - prediction[0][0]) * 100
+
+    st.write(f"Confidence Score: {confidence:.2f}%")
+
+# -----------------------------
+# Footer
+# -----------------------------
+
+st.markdown("---")
+st.markdown(
+    "Developed using CNN, TensorFlow, Streamlit, and Chest X-ray Images"
+)
