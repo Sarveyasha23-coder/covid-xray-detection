@@ -157,3 +157,11 @@ st.markdown("---")
 st.markdown(
     "Developed using CNN, TensorFlow, Streamlit, and Chest X-ray Imaging"
 )
+st.markdown(
+    """
+    <div style='text-align: center; font-size: 28px; font-weight: 600;'>
+        Built by Sarveyasha Sodhiya
+    </div>
+    """,
+    unsafe_allow_html=True
+)
